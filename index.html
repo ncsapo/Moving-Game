@@ -1,0 +1,844 @@
+<html>
+<head>
+<meta charset='UTF-8'>
+<canvas id="canvas" height="400px" width="500px" onclick="moveStart()"></canvas>
+
+<div id="HUD">
+<div id="timer">Time: 0 S</div>
+<input type="button" id="start" value="start" onclick="timer = setInterval(updateTimer,1000);moveStart()">
+<input type="button" id="mapChange" value="Change" onclick="mapSet(0);mapSet(1);">
+<input type="button" id="boxPos" value="Position" onclick="boxPos()">
+<input type="button" id="Restart" value="Restart" onclick="location.reload()">
+<input type="button" id="revealBlack" value="Light Switch" onclick="removeBlack();">
+<div id="pets">Press Enter to Start</div>
+<div id="mapNumHUD">On Map: 0</div>
+<div id="itemHUD"><img id="boatHUD"src="boat.png"><img id="boatCheck" class="itemCheck" src="rCheck.png"></div>
+</div>
+<div id="forefront0" class="forefront"></div>
+<div id="forefront1" class="forefront"></div>
+<div id="forefront2" class="forefront"></div>
+<div id="forefront3" class="forefront"></div>
+<div id="box"><img id="man" src="mand.png"><img id="blk" src="blktemplate.png"></div>
+<div id="goal"></div>
+<div id="boat"></div>
+
+<style>
+	html{overflow:hidden;}
+	#canvas{
+		border:1px solid black;
+		z-index:0;
+	}
+	.forefront{
+		position:absolute;	
+		background-color:white;
+		z-index:6;
+	}
+	#forefront0{
+		left:0px;
+		top:329px;
+		width:1000px;
+		height:400px;
+	}
+	#forefront1{
+		left:0px;
+		top:0px;
+		width:1000px;
+		height:8px;
+	}
+	#forefront2{
+		left:0px;
+		top:0px;
+		width:8px;
+		height:350px;
+	}
+	#forefront3{
+		left:589px;
+		top:0px;
+		width:411px;
+		height:350px;
+	}
+	#blk{
+		position:absolute;
+		width:1000px;
+		height:800px;
+		overflow:clip;
+		left:-490px;
+		top:-390px;
+		z-index:2;
+		}
+	#HUD{
+		position:absolute;
+		background-color:grey;
+		width:100px;
+		height:321px;
+		left:489px;
+		top:8px;
+		z-index:10;
+	}
+	#timer{
+		position:absolute;
+		top:25px;
+		left:2px;
+		width:90px;
+		height:25px;
+	}
+	.itemCheck{
+		position:absolute;
+		right:20px;
+		width:15px;
+		height:auto;
+	}
+	#boatCheck{top:70px;}
+	#boatHUD{
+		position:absolute;
+		width:50px;
+		height:auto;
+		left:2px;
+		top:70px;
+	}
+	#pets{
+		position:absolute;
+		font-size:90;
+		color:red;
+		z-index:10;
+		width:300px;
+		height:200px;
+		right:200px;
+		top:0px;
+	}
+	#start{
+		position:absolute;
+		z-index:2;
+		left:5px;
+		bottom:70px;
+		width:75px;
+	}
+	#mapChange{
+		position:absolute;
+		z-index:2;
+		left:5px;
+		bottom:40px;
+		width:75px;
+	}
+	#boxPos{
+		position:absolute;
+		z-index:2;
+		left:5px;
+		bottom:10px;
+		width:75px;
+	}
+	#Restart{
+		position:absolute;
+		z-index:2;
+		left:5px;
+		bottom:100px;
+		width:75px;
+	}
+	#revealBlack{
+		position:absolute;
+		z-index:2;
+		left:5px;
+		bottom:130px;
+		width:75px;
+		font-size:12.25px;
+	}
+	/*black tiles*/
+	.black{position:absolute;background-color:black;width:32px;height:32px;z-index:0;}
+	.row0{top:9px;}
+	.row1{top:41px;}
+	.row2{top:73px;}
+	.row3{top:105px;}
+	.row4{top:137px;}
+	.row5{top:169px;}
+	.row6{top:201px;}
+	.row7{top:233px;}
+	.row8{top:265px;}
+	.row9{top:297px;}
+	.col0{left:9px;}
+	.col1{left:41px;}
+	.col2{left:73px;}
+	.col3{left:105px;}
+	.col4{left:137px;}
+	.col5{left:169px;}
+	.col6{left:201px;}
+	.col7{left:233px;}
+	.col8{left:265px;}
+	.col9{left:297px;}
+	.col10{left:329px;}
+	.col11{left:361px;}
+	.col12{left:393px;}
+	.col13{left:425px;}
+	.col14{left:457px;}
+	
+	
+	#box{
+		position:absolute;
+		width:20px;
+		height:20px;
+		z-index:2;
+	}
+	#man{
+		max-width:100%;
+		height:auto;
+	
+	}
+	#boat{
+		position:absolute;
+		width:20px;
+		height:20px;
+		z-index:3;
+		background-color:brown;
+		display:none;
+		border-radius:25%;
+	}
+	
+	#goal{
+		position:absolute;
+		width:20px;
+		height:20px;
+		background-color:gold;
+		border-radius:10%;
+		z-index:3;
+	}
+</style>
+<script src="jquery-2.1.3.js"></script>
+<script src="jquery.velocity.min.js"></script>
+<script src="velocity.ui.min.js"></script>
+<script>
+//map loading
+//Utilities
+
+function boxPos(){alert("left: "+$(box).css('left'));alert("top: "+$(box).css('top'))}
+function removeBlack(){$("#blk").hide();}
+
+
+//Player
+
+player = {
+	hasBoat: 0,
+	onWater: 0,
+}
+
+//Maps
+    
+//width = 15, height = 10
+
+/*
+	0 = Grass
+	1 = Rock
+	2 = Sand
+	3 = Water
+*/
+    
+/*Map Shell
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+[1,,,,,,,,,,,,,,1],
+[1,,,,,,,,,,,,,,1],
+[1,,,,,,,,,,,,,,1],
+[1,,,,,,,,,,,,,,1],
+[1,,,,,,,,,,,,,,1],
+[1,,,,,,,,,,,,,,1],
+[1,,,,,,,,,,,,,,1],
+[1,,,,,,,,,,,,,,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+
+To Add Map create M# Array. In mapSet(z) add if(mapNum==#){Settings} under previous if. To find Left px 32*tile num from 48px and add 48
+*/
+    
+var map =[
+		[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+		[1,0,0,0,0,0,0,1,1,1,1,1,1,1,1],
+		[1,0,0,1,1,0,0,1,1,1,1,1,1,1,1],
+		[1,0,0,1,1,0,0,1,1,1,1,1,1,1,1],
+		[1,0,0,1,1,0,0,0,0,0,0,0,1,1,1],
+		[1,0,0,1,1,0,0,0,0,0,0,0,1,1,1],
+		[1,0,0,1,1,1,1,1,1,1,0,0,1,1,1],
+		[1,0,0,0,0,0,0,1,1,1,0,0,1,1,1],
+		[1,0,0,1,1,1,0,0,0,0,0,0,1,1,1],
+		[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+	];
+    
+var m1 =[
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+        [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,0,0,1,1],
+        [1,1,0,0,0,0,0,0,0,0,0,0,0,1,1],
+        [1,1,0,0,0,0,0,0,0,0,0,0,0,1,1],
+        [1,1,0,0,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+        [1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    ];
+	
+var m2 =[
+		[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+		[1,0,1,0,0,0,0,0,0,0,0,0,0,0,1],
+		[1,0,1,0,1,1,1,1,1,1,1,1,1,0,1],
+		[1,0,1,0,1,0,0,0,0,0,0,0,1,0,1],
+		[1,0,1,0,1,0,1,1,1,1,1,0,1,0,1],
+		[1,0,1,0,1,1,1,1,1,1,1,0,1,0,1],
+		[1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+		[1,0,1,1,1,1,1,1,1,1,1,1,1,0,1],
+		[1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+		[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+	];
+    
+var m3 =[
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,0,0,2,3,3,3,3,2,0,0,1],
+        [1,0,0,0,0,0,2,3,3,3,3,2,0,0,1],
+        [1,0,0,0,0,0,2,3,3,3,3,2,0,0,1],
+        [1,0,0,0,0,0,2,3,3,3,3,2,0,0,1],
+        [1,0,0,0,0,0,2,3,3,3,3,2,0,0,1],
+        [1,0,0,0,0,0,2,3,3,3,3,2,0,0,1],
+        [1,0,0,0,0,0,2,3,3,3,3,2,0,0,1],
+        [1,0,0,0,0,0,2,3,3,3,3,2,0,0,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+	];
+
+var m4 =[
+		[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+		[1,0,1,2,3,3,3,3,3,3,3,1,0,0,1],
+		[1,0,1,2,3,3,3,3,3,3,3,1,0,0,1],
+		[1,0,1,2,3,3,3,3,3,3,3,2,0,0,1],
+		[1,0,1,2,3,3,3,3,3,3,3,2,1,1,1],
+		[1,0,1,2,3,3,3,3,3,3,3,2,0,1,1],
+		[1,0,1,2,3,3,3,3,3,3,3,1,0,0,1],
+		[1,0,1,0,1,1,1,1,1,1,1,1,1,0,1],
+		[1,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+		[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+	];
+	
+var mapHeight = 10;
+var mapWidth = 15;
+	
+var canvas;
+var context;
+
+var mapNum = -1;
+
+time = 0;
+timer;
+function mapSet(z){
+	startStop=1;
+    if(!z)moveStart();
+	if(z){
+		mapNum++;
+		$("#mapNumHUD").text("On Map: "+mapNum);
+        $("#pets").show();
+	}
+	if(mapNum==0){
+		playerX = 5;
+		playerY = 1;
+		boatX = 0;
+		boatY = 0;
+		playerDir = 'd';
+        $('#man').attr('src','mand.png');
+		$(box).css({'left':'176px','top':'48px'});
+		left=1;
+		up=1;
+		spawnGoal(0);
+	}
+	if(mapNum==1){
+		map = m1;
+		playerX = 1;
+		playerY = 1;
+		playerDir = 'd';
+        $('#man').attr('src','mand.png');
+		$(box).css({'left':'48px','top':'48px'});
+		left=1;
+		up=1;
+		spawnGoal(1);
+	}
+	if(mapNum==2){
+		map = m2;
+		playerX = 1;
+		playerY = 1;
+		playerDir = 'd';
+        $('#man').attr('src','mand.png');
+		$(box).css({'left':'48px','top':'48px'});
+		left=1;
+		up=1;
+		right=1;
+		spawnGoal(2);
+	}
+    if(mapNum==3){
+		map = m3;
+		playerX = 1;
+		playerY = 1;
+		playerDir = 'd';
+        $('#man').attr('src','mand.png');
+		$(box).css({'left':'48px','top':'48px'});
+		left=1;
+		up=1;
+		spawnGoal(3);
+		spawnBoat(3);
+	}
+	if(mapNum==4){
+		map = m4;
+		playerX = 13;
+		playerY = 1;
+		playerDir = 'd';
+        $('#man').attr('src','mand.png');
+		$(box).css({'left':'432px','top':'48px'});
+		right=1;
+		up=1;
+		spawnGoal(4);
+		spawnBoat(4);
+	}
+	if(mapNum>4){alert("You Win!!\nFinal Time: "+time+" Seconds");location.reload();}
+	
+	setup();
+	
+}
+
+	
+function setup(){
+
+	//Map Creation
+	var tileDistance = 32;
+	left=0;
+	right=0;
+	up=0;
+	down=0;
+
+	var canvas=document.getElementById('canvas');
+	var context=canvas.getContext("2d");
+	context.clearRect(0,0,canvas.width, canvas.height);
+	
+	
+	function mapLoad(){
+		for(var i=0;i<10;i++){
+			for(var j=0;j<15;j++){
+				if(map[i][j]==0){
+					context.drawImage(grass, posX, posY, 32, 32);
+				}
+				if(map[i][j]==1){
+					context.drawImage(rock, posX, posY, 32, 32);
+				}
+				if(map[i][j]==2){
+					context.drawImage(sand, posX, posY, 32, 32);
+				}
+				if(map[i][j]==3){
+					context.drawImage(water, posX, posY, 32, 32);
+				}
+				posX+=32;
+			}
+			posX=0;
+			posY+=32;
+		}
+	}
+
+	canvas.width = (tileDistance*mapWidth);
+	canvas.height = (tileDistance*mapHeight);
+
+	if(mapNum==0){
+		grass = new Image();
+		grass.src='grass.png';
+		rock = new Image();
+		rock.src='rock.png';
+		sand = new Image();
+		sand.src='sand.png';
+		water = new Image();
+		water.src='water.png';
+	}
+	
+	if(mapNum!=0){
+		$(rock).load();
+		$(grass).load();
+		$(sand).load();
+		$(water).load();
+    }
+	
+	var posX = 0;
+	var posY = 0;
+	
+	rock.onload = function(){
+	//grass.onload = function(){
+	//sand.onload = function(){
+		mapLoad();
+	//}
+	//}
+	}
+	
+	//Player Creation
+	var box = document.getElementById('box');
+	
+	//Black Load/Reload
+	$(".black").show();
+	revealTiles();
+	
+	//Remove Player Attributes/Items
+	player.onWater = 0;
+	player.hasBoat = 0;
+	$(".itemCheck").attr('src','rCheck.png');
+	
+}
+
+function moveStart(){
+	$("#pets").hide();
+	startStop = 0;
+	move = 0;
+	
+	function changeDir(a,b){
+		if(a=='l'){
+			playerDir = 'l';
+			if(!player.onWater){
+				$('#man').attr('src','manl.png');
+			}
+			if(player.onWater){
+				$('#man').attr('src','manlb.png');
+			}
+		}
+		if(a=='r'){
+			playerDir = 'r';
+			$('#man').attr('src','manr.png');
+		}
+		if(a=='u'){
+			playerDir = 'u';
+			$('#man').attr('src','manu.png');
+		}
+		if(a=='d'){
+			playerDir = 'd';
+			$('#man').attr('src','mand.png');
+		}
+	}
+	
+	function checkCol(){
+	//Reveal Tiles
+		revealTiles();
+        
+	
+    //Check If On Boat
+        if((playerX==boatX)&&(playerY==boatY)){
+			$("#boat").hide();
+			boatX = 0;
+			boatY = 0;
+			player.hasBoat = 1;
+			$("#boatCheck").attr('src','gCheck.png');
+		}
+	//Check What Tile Player is On
+		if(map[playerY][playerX]==0){}
+		if(map[playerY][playerX]==1){alert("Hey! Get off of there!");}
+		if(map[playerY][playerX]==2){
+			player.onWater = 0;
+		}
+		if(map[playerY][playerX]==3){
+			player.onWater = 1;
+		}
+    //Check Possible Directions
+	//Check Left
+        //Grass
+		if((map[playerY][playerX-1])==0){
+			left = 0;
+		}
+        //Rock
+		else if((map[playerY][playerX-1])==1){
+			left = 1;
+		}
+        //Sand
+        else if((map[playerY][playerX-1])==2){
+			left = 0;
+		}
+        //Water
+		else if((map[playerY][playerX-1])==3){
+			if(!player.hasBoat){left = 1}
+			if(player.hasBoat){left = 0}
+		}
+	//Check Right
+		//Grass
+		if((map[playerY][playerX+1])==0){
+			right = 0;
+		}
+		//Rock
+		else if((map[playerY][playerX+1])==1){
+			right = 1;
+		}
+        //Sand
+        else if((map[playerY][playerX+1])==2){
+			right = 0;
+		}
+		//Water
+		else if((map[playerY][playerX+1])==3){
+			if(!player.hasBoat){right = 1}
+			if(player.hasBoat){right = 0}
+		}
+	//Check Up
+        //Grass
+		if((map[playerY-1][playerX])==0){
+			up = 0;
+		}
+        //Rock
+		else if((map[playerY-1][playerX])==1){
+			up = 1;
+		}
+        //Sand
+        else if((map[playerY-1][playerX])==2){
+			up = 0;
+		}
+        //Water
+		else if((map[playerY-1][playerX])==3){
+			if(!player.hasBoat){up = 1}
+			if(player.hasBoat){up = 0}
+		}
+	//Check Down
+        //Grass
+		if((map[playerY+1][playerX])==0){
+			down = 0;
+		}
+        //Rock
+		else if((map[playerY+1][playerX])==1){
+			down = 1;
+		}
+        //Sand
+        else if((map[playerY+1][playerX])==2){
+			down = 0;
+		}
+        //Water
+		else if((map[playerY+1][playerX])==3){
+			if(!player.hasBoat){down = 1}
+			if(player.hasBoat){down = 0}
+		}
+	//Check for Overlap
+		if(playerX==0){checkMove('r')}
+		if(playerX == mapWidth){checkMove('l')}
+		if(playerY == 0){checkMove('d')}
+		if(playerY == mapHeight){checkMove('u')}
+	}
+	
+	function checkMove(x){
+		checkCol();
+		switch(x){
+		case 'l':if(playerDir!='l'){changeDir('l',box);}break;
+		case 'r':if(playerDir!='r'){changeDir('r',box);}break;
+		case 'u':if(playerDir!='u'){changeDir('u',box);}break;
+		case 'd':if(playerDir!='d'){changeDir('d',box);}break;
+		}
+//Left
+		if(!startStop&&!left&&move&&x=='l'){
+			playerX--;
+			$("#box").animate({left:'-=32'},100, function(){
+				move=0;
+			
+			//Check if player on water to change img src
+				if(player.onWater==0){$('#man').attr('src','manl.png');}
+				if(player.onWater==1){$('#man').attr('src','manlb.png');}
+			//Check for Goal
+				if((playerX==goalX)&&(playerY==goalY)){clearInterval(timer);mapSet(0);mapSet(1);}
+				else{checkCol()};
+			});
+		}
+        if(!startStop&&left&&move&&x=='l'){
+            mapSet(0);
+        }
+//Right
+		if(!startStop&&!right&&move&&x=='r'){
+			playerX++;
+			$("#box").animate({left:'+=32'},100, function(){
+				move=0;
+			
+			//Check if player on water to change img src
+				if(player.onWater==0){$('#man').attr('src','manr.png');}
+				if(player.onWater==1){$('#man').attr('src','manrb.png');}
+			//Check for Goal
+				if((playerX==goalX)&&(playerY==goalY)){clearInterval(timer);mapSet(0);mapSet(1);}
+				else{checkCol()};
+			});
+		}
+        if(!startStop&&right&&move&&x=='r'){
+            mapSet(0);
+        }
+//Up
+		if(!startStop&&!up&&move&&x=='u'){
+			playerY--;	
+			$("#box").animate({top:'-=32'},100, function(){
+				move=0;
+			
+			//Check if player on water to change img src
+				if(player.onWater==0){$('#man').attr('src','manu.png');}
+				if(player.onWater==1){$('#man').attr('src','manub.png');}
+			//Check for Goal
+				if((playerX==goalX)&&(playerY==goalY)){clearInterval(timer);mapSet(0);mapSet(1);}
+				else{checkCol()};
+			});
+		}
+        if(!startStop&&up&&move&&x=='u'){
+            mapSet(0);
+        }
+//Down
+		if(!startStop&&!down&&move&&x=='d'){
+			playerY++;
+			$("#box").animate({top:'+=32'},100, function(){
+				move=0;
+			
+			//Check if player on water to change img src
+				if(player.onWater==0){$('#man').attr('src','mand.png');}
+				if(player.onWater==1){$('#man').attr('src','mandb.png');}
+			//Check for Goal
+				if((playerX==goalX)&&(playerY==goalY)){clearInterval(timer);mapSet(0);mapSet(1);}
+				else{checkCol()};
+			});
+		}
+        if(!startStop&&down&&move&&x=='d'){
+            mapSet(0);
+        }
+	}
+	
+	function keys(){
+	$(document).keydown(function(e) {
+		switch(e.which){
+		//left
+			case 65:
+			case 37:
+				if(move){break;}
+				move = 1;
+				checkMove('l');
+				break;
+		//right
+			case 68:
+			case 39:
+				if(move){break;}
+				move = 1;
+				checkMove('r');
+				break;
+		//up
+			case 87:
+			case 38:
+				if(move){break;}
+				move = 1;
+				checkMove('u');
+				break;
+		//down
+			case 83:
+			case 40:
+				if(move){break;}
+				move = 1;
+				checkMove('d');
+				break;
+		}
+	});
+
+	$(document).keyup(function(e) {
+		switch(e.which){
+		//left
+			case 65:
+			case 37:
+				move = 0;
+				checkMove();
+				break;
+		//right
+			case 68:
+			case 39:
+				move = 0;
+				checkMove();
+				break;
+		//up
+			case 87:
+			case 38:
+				move = 0;
+				checkMove();
+				break;
+		//down
+			case 83:
+			case 40:
+				move = 0;
+				checkMove();
+				break;
+		}
+	});
+	}
+	keys();
+}
+
+function updateTimer(){
+	time++
+	$("#timer").text("Time: "+time+" S");
+}
+
+function revealTiles(){
+    $('.black').show();
+	bCenter = ".row"+(playerY)+".col"+(playerX);
+	bLeft = ".row"+(playerY)+".col"+(playerX-1);
+	bRight = ".row"+(playerY)+".col"+(playerX+1);
+	bUp = ".row"+(playerY-1)+".col"+(playerX);
+	bDown = ".row"+(playerY+1)+".col"+(playerX);
+	
+	$(bCenter).hide();
+	$(bLeft).hide();
+	$(bRight).hide();
+	$(bUp).hide();
+	$(bDown).hide();
+	
+}
+
+
+
+function spawnGoal(n){
+	var goal = document.getElementById('goal');
+	goalX = 6;
+	goalY = 7;
+	switch(n){
+		case 0:
+			goalX = 6;
+			goalY = 7;
+			$('#goal').css({left:'208',top:'240'});
+			break;
+		case 1:
+			goalX = 13;
+			goalY = 7;
+			$('#goal').css({left:'432',top:'240'});
+			break;
+		case 2:
+			goalX = 5;
+			goalY = 4;
+			$('#goal').css({left:'176',top:'144'});
+			break;
+        case 3:
+            goalX = 13;
+            goalY = 7;
+            $('#goal').css({left:'432',top:'240'});
+            break;
+		case 4:
+			goalX = 1;
+			goalY = 1;
+			$('#goal').css({left:'48',top:'48'});
+	}
+}
+
+function spawnBoat(f){
+	var boat = document.getElementById('boat');
+	boatX = 6;
+	boatY = 8;
+	switch(f){
+		case 3:
+			boatX = 6;
+			boatY = 8;
+			$('#boat').css({left:'208',top:'272'}).show();
+			break;
+		case 4:
+			boatX = 5;
+			boatY = 8;
+			$('#boat').css({left:'176',top:'272'}).show();
+	}
+	
+}
+
+//Allow player to start by pressing enter
+$(document).ready(function(){
+	$(document).keydown(function(e) {
+		switch(e.which){
+			case 13:
+				timer = setInterval(updateTimer,1000);
+				moveStart();
+				break;
+		}});
+});
+//Load the first map
+mapSet(1);
+</script>
+
+</head>
+<body>
+</body>
+</html>
